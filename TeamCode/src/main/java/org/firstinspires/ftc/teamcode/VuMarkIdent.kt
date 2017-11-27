@@ -18,7 +18,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables
 @Autonomous(name="VuMark Id", group ="VuMarks")
 class VuMarkIdent : LinearOpMode() {
 
-    private var robot = Hardware(this, Hardware.DriveMode.Holonomic, false, true, false) // use the class created to define a robot's hardware
+    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, false, true, false) // use the class created to define a robot's hardware
 
     override fun runOpMode() {
         robot.init(hardwareMap)

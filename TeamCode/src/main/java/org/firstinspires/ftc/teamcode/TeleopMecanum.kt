@@ -11,7 +11,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 class TeleopMecanum : OpMode() {
 
     /* Declare OpMode members. */
-    private var robot = Hardware(this, Hardware.DriveMode.Mecanum) // use the class created to define a robot's hardware
+    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum) // use the class created to define a robot's hardware
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -42,6 +42,13 @@ class TeleopMecanum : OpMode() {
     override fun loop() {
         // Run the robot drive in mecanum mode
         robot.drive(-gamepad1.left_stick_x, -gamepad1.left_stick_y, -gamepad1.right_stick_x)
+
+        robot.motors["arm"]!![0].power = if (gamepad1.a) 1.0 else if (gamepad1.b) -1.0 else 0.0
+        robot.motors["arm"]!![1].power = robot.motors["arm"]!![0].power
+
+        robot.motors["arm"]!![2].power = if (gamepad1.dpad_up) 1.0 else if (gamepad1.dpad_down) -1.0 else 0.0
+
+        robot.motors["arm"]!![3].power = if (gamepad1.dpad_left) 1.0 else if (gamepad1.dpad_right   ) -1.0 else 0.0
     }
 
     /*

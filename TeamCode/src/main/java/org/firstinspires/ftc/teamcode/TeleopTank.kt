@@ -12,7 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 class TeleopTank : OpMode() {
 
     /* Declare OpMode members. */
-    private var robot = Hardware(this, Hardware.DriveMode.Tank) // use the class created to define a robot's hardware
+    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Tank, false, false) // use the class created to define a robot's hardware
 
     /*
      * Code to run ONCE when the driver hits INIT

@@ -20,7 +20,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesReference
 class AutonTest : LinearOpMode() {
 
     /* Declare OpMode members. */
-    private var robot = Hardware(this, Hardware.DriveMode.Holonomic, true) // use the class created to define a robot's hardware
+    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, true) // use the class created to define a robot's hardware
     private var imu: BNO055IMU? = null
     private var angle : Float = 0f
 
@@ -45,42 +45,40 @@ class AutonTest : LinearOpMode() {
 
         waitForStart()
 
-        robot.motors[0]!!.targetPosition = 7500
-        robot.motors[1]!!.targetPosition = 7500
-        robot.motors[2]!!.targetPosition = 7500
-        robot.motors[3]!!.targetPosition = 7500
+        robot.motors["drive"]!![0].targetPosition = 7500
+        robot.motors["drive"]!![1].targetPosition = 7500
+        robot.motors["drive"]!![2].targetPosition = 7500
+        robot.motors["drive"]!![3].targetPosition = 7500
 
-        robot.motors.forEach { motor ->
-            motor!!.power = 0.7
+        robot.motors["drive"]!!.forEach { motor ->
+            motor.power = 0.7
         }
 
-        robot.motors.forEach { motor ->
-            val it = motor!!
-
+        robot.motors["drive"]!!.forEach {
             while (it.isBusy && it.currentPosition < it.targetPosition && opModeIsActive()) {
                 angle = imu!!.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES)!!.firstAngle
-                robot.motors.forEach { m ->
-                    m!!.targetPosition = if (m.isBusy) m.targetPosition else m.currentPosition + 1
+                robot.motors["drive"]!!.forEach { m ->
+                    m.targetPosition = if (m.isBusy) m.targetPosition else m.currentPosition + 1
                 }
 
                 when {
                     angle > 0 -> {
-                        robot.motors[0]!!.power = .7 - (angle / 5)
-                        robot.motors[2]!!.power = .7 - (angle / 5)
+                        robot.motors["drive"]!![0].power = .7 - (angle / 5)
+                        robot.motors["drive"]!![2].power = .7 - (angle / 5)
                     }
                     angle < 0 -> {
-                        robot.motors[1]!!.power = .7 + (angle / 5)
-                        robot.motors[3]!!.power = .7 + (angle / 5)
+                        robot.motors["drive"]!![1].power = .7 + (angle / 5)
+                        robot.motors["drive"]!![3].power = .7 + (angle / 5)
                     }
                     else -> {
-                        robot.motors.forEach { m ->
-                            m!!.power = .7
+                        robot.motors["drive"]!!.forEach { m ->
+                            m.power = .7
                         }
                     }
                 }
 
-                robot.motors.forEach {
-                    telemetry.addData(it!!.deviceName, "%d", it.currentPosition)
+                robot.motors["drive"]!!.forEach {
+                    telemetry.addData(it.deviceName, "%d", it.currentPosition)
                 }
                 telemetry.addData("Angle", angle)
                 telemetry.update()

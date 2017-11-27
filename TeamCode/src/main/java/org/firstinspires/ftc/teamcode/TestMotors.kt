@@ -11,7 +11,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark
 @Autonomous(name="Test", group ="Motors")
 class TestMotors : LinearOpMode() {
 
-    private var robot = Hardware(this, Hardware.DriveMode.Mecanum, false, false) // use the class created to define a robot's hardware
+    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum, false, false) // use the class created to define a robot's hardware
 
     override fun runOpMode() {
         robot.init(hardwareMap)
@@ -20,8 +20,8 @@ class TestMotors : LinearOpMode() {
         waitForStart()
 
         while (opModeIsActive()) {
-            robot.motors.forEach {
-                it!!.power = .25
+            robot.motors["drive"]!!.forEach {
+                it.power = .25
                 Thread.sleep(2000)
                 it.power = 0.0
                 Thread.sleep(2000)

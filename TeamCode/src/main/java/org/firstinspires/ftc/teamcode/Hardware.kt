@@ -14,7 +14,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables
  */
 
 /* Makes moving with the robot easier */
-class Hardware(private var mode : OpMode,
+class Hardware(private var hwMap : HardwareMap?,
+               private var mode : OpMode,
                private var driveMode : DriveMode,
                private var useSensors : Boolean = false,
                private var useVuforia : Boolean = false,
@@ -47,10 +48,9 @@ class Hardware(private var mode : OpMode,
     }
 
     /* The motors on the drive */
-    var motors: Map<String, Array<DcMotor?>> = emptyMap()
+    var motors: MutableMap<String, Array<DcMotor>> = mutableMapOf()
 
     /* private OpMode members. */
-    private var hwMap: HardwareMap? = null
     private val period = ElapsedTime()
 
     /* The different drive modes */
@@ -61,10 +61,8 @@ class Hardware(private var mode : OpMode,
     }
 
     /* Initialize standard Hardware interfaces */
-    fun init(ahwMap : HardwareMap, motorMode : DcMotor.RunMode = DcMotor.RunMode.RUN_WITHOUT_ENCODER) {
-        // Save reference to Hardware map
-        hwMap = ahwMap
-
+    fun init(awMap : HardwareMap?, motorMode : DcMotor.RunMode = DcMotor.RunMode.RUN_WITHOUT_ENCODER) {
+        hwMap = awMap!!
         if (useSensors) {
             // Initialize sensors
             colorSensor = hwMap!!.get(ColorSensor::class.java, "rev color")
@@ -74,28 +72,49 @@ class Hardware(private var mode : OpMode,
 
         if (useMotors) {
             // Define and Initialize Motors
-            motors = arrayOf(
-                    hwMap!!.dcMotor.get("front left drive"),
-                    hwMap!!.dcMotor.get("front right drive"),
-                    hwMap!!.dcMotor.get("back left drive"),
-                    hwMap!!.dcMotor.get("back right drive"))
+            motors["drive"] = arrayOf(
+                    hwMap!!.dcMotor["front left drive"]!!,
+                    hwMap!!.dcMotor["front right drive"]!!,
+                    hwMap!!.dcMotor["back left drive"]!!,
+                    hwMap!!.dcMotor["back right drive"]!!
+            )
+
+            motors["arm"] = arrayOf(
+                    hwMap!!.dcMotor["left lift motor"]!!,
+                    hwMap!!.dcMotor["right lift motor"]!!,
+                    hwMap!!.dcMotor["claw control motor"]!!,
+                    hwMap!!.dcMotor["claw motor"]!!
+            )
 
             // Set all motors to zero power and to run without encoders
-            motors.forEach {
-                it!!.power = 0.0
+            motors["drive"]!!.forEach {
+                it.power = 0.0
                 it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
                 it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
             }
 
-            Thread.sleep(50)
-            motors.forEach {
-                it!!.mode = motorMode
+            motors["arm"]!!.forEach {
+                it.power = 0.0
+                it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
+                it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
             }
 
-            motors[0]!!.direction = DcMotorSimple.Direction.REVERSE
-            motors[1]!!.direction = DcMotorSimple.Direction.FORWARD
-            motors[2]!!.direction = DcMotorSimple.Direction.REVERSE
-            motors[3]!!.direction = DcMotorSimple.Direction.FORWARD
+
+            Thread.sleep(50)
+            motors["drive"]!!.forEach {
+                it.mode = motorMode
+            }
+
+            motors["drive"]!!.forEach {
+                it.mode = motorMode
+            }
+
+            motors["drive"]!![0].direction = DcMotorSimple.Direction.REVERSE
+            motors["drive"]!![1].direction = DcMotorSimple.Direction.FORWARD
+            motors["drive"]!![2].direction = DcMotorSimple.Direction.REVERSE
+            motors["drive"]!![3].direction = DcMotorSimple.Direction.FORWARD
+            motors["arm"]!![0].direction = DcMotorSimple.Direction.FORWARD
+            motors["arm"]!![1].direction = DcMotorSimple.Direction.REVERSE
         }
 
         if (useVuforia) {
@@ -115,14 +134,14 @@ class Hardware(private var mode : OpMode,
     }
 
     fun setDrive(upLeft: Float, upright: Float, downLeft: Float, downright: Float) {
-        motors[0]!!.power = upLeft.toDouble()
-        motors[1]!!.power = upright.toDouble()
-        motors[2]!!.power = downLeft.toDouble()
-        motors[3]!!.power = downright.toDouble()
+        motors["drive"]!![0].power = upLeft.toDouble()
+        motors["drive"]!![1].power = upright.toDouble()
+        motors["drive"]!![2].power = downLeft.toDouble()
+        motors["drive"]!![3].power = downright.toDouble()
 
         // Send telemetry message to signify robot running;
-        motors.forEach {
-            mode.telemetry.addData(it!!.deviceName, "%d", it.currentPosition)
+        motors["drive"]!!.forEach {
+            mode.telemetry.addData(it.deviceName, "%d", it.currentPosition)
         }
     }
 
@@ -136,9 +155,9 @@ class Hardware(private var mode : OpMode,
 
     private fun mecanum(x : Float, y : Float, θ : Float) {
         val fl = x + y + θ
-        val fr = x - y + θ
-        val bl = x - y + θ
-        val br = x - y - θ
+        val fr = x + y + θ
+        val bl = x + y + θ
+        val br = x + y + θ
         setDrive(fl, fr, bl, br)
     }
 

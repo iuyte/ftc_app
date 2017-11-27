@@ -13,7 +13,7 @@ import com.qualcomm.robotcore.hardware.DcMotor
 class TeleopHolonomic : OpMode() {
 
     // Manages some reusable code
-    private var robot = Hardware(this, Hardware.DriveMode.Holonomic, true)
+    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, true)
 
     // Code to run ONCE when the driver hits INIT
     override fun init() {
