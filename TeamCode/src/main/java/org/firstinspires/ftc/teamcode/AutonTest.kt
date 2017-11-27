@@ -10,7 +10,6 @@ import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation
 
 /**
  * Created by ethan on 7/29/17.
@@ -32,8 +31,6 @@ class AutonTest : LinearOpMode() {
          */
         robot.init(hardwareMap, DcMotor.RunMode.RUN_TO_POSITION)
 
-        robot.motors[1]!!.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
-
         val parameters = BNO055IMU.Parameters()
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES
         parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC
@@ -48,44 +45,43 @@ class AutonTest : LinearOpMode() {
 
         waitForStart()
 
+        robot.motors[0]!!.targetPosition = 7500
+        robot.motors[1]!!.targetPosition = 7500
+        robot.motors[2]!!.targetPosition = 7500
+        robot.motors[3]!!.targetPosition = 7500
+
         robot.motors.forEach { motor ->
             motor!!.power = 0.7
         }
 
-        robot.motors[0]!!.targetPosition = 7750
-        robot.motors[2]!!.targetPosition = 9200
-        robot.motors[3]!!.targetPosition = 7750
-
-        for (i in 0..robot.motors.size) {
-            var it = robot.motors[i]!!
-            if (i == 1) {
-                break
-            }
+        robot.motors.forEach { motor ->
+            val it = motor!!
 
             while (it.isBusy && it.currentPosition < it.targetPosition && opModeIsActive()) {
                 angle = imu!!.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES)!!.firstAngle
-                for (m in 0..robot.motors.size) {
-                    if (m == 1) {
-                        break
-                    }
-                    var motor = robot.motors[m]!!
-                    motor.targetPosition = if (motor.isBusy) motor.targetPosition else motor.currentPosition + 1
+                robot.motors.forEach { m ->
+                    m!!.targetPosition = if (m.isBusy) m.targetPosition else m.currentPosition + 1
                 }
 
-                if (angle > 0) {
-                    robot.motors[0]!!.power = .7 - (angle / 7)
-                    robot.motors[2]!!.power = .7 - (angle / 7)
-                } else if (angle < 0) {
-                    robot.motors[1]!!.power = .7 + (angle / 7)
-                    robot.motors[3]!!.power = .7 + (angle / 7)
-                } else {
-                    robot.motors.forEach { motor ->
-                        motor!!.power = .7
+                when {
+                    angle > 0 -> {
+                        robot.motors[0]!!.power = .7 - (angle / 5)
+                        robot.motors[2]!!.power = .7 - (angle / 5)
+                    }
+                    angle < 0 -> {
+                        robot.motors[1]!!.power = .7 + (angle / 5)
+                        robot.motors[3]!!.power = .7 + (angle / 5)
+                    }
+                    else -> {
+                        robot.motors.forEach { m ->
+                            m!!.power = .7
+                        }
                     }
                 }
 
-                telemetry.addData("Left", robot.motors[0]!!.currentPosition)
-                telemetry.addData("Right", robot.motors[1]!!.currentPosition)
+                robot.motors.forEach {
+                    telemetry.addData(it!!.deviceName, "%d", it.currentPosition)
+                }
                 telemetry.addData("Angle", angle)
                 telemetry.update()
                 robot.waitForTick(25)

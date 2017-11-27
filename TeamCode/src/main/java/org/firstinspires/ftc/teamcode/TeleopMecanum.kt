@@ -41,7 +41,7 @@ class TeleopMecanum : OpMode() {
      */
     override fun loop() {
         // Run the robot drive in mecanum mode
-        robot.drive(gamepad1.left_stick_x, -gamepad1.left_stick_y, gamepad1.right_stick_x)
+        robot.drive(-gamepad1.left_stick_x, -gamepad1.left_stick_y, -gamepad1.right_stick_x)
     }
 
     /*

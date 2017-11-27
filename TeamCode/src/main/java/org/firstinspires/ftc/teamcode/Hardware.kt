@@ -17,7 +17,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables
 class Hardware(private var mode : OpMode,
                private var driveMode : DriveMode,
                private var useSensors : Boolean = false,
-               private var useVuforia : Boolean = false) {
+               private var useVuforia : Boolean = false,
+               private var useMotors : Boolean = true) {
     // Color sensor
     var colorSensor: ColorSensor? = null
     var button: DigitalChannel? = null
@@ -46,7 +47,7 @@ class Hardware(private var mode : OpMode,
     }
 
     /* The motors on the drive */
-    var motors: Array<DcMotor?> = arrayOfNulls(4)
+    var motors: Map<String, Array<DcMotor?>> = emptyMap()
 
     /* private OpMode members. */
     private var hwMap: HardwareMap? = null
@@ -71,31 +72,31 @@ class Hardware(private var mode : OpMode,
             revButton = hwMap!!.get(DigitalChannel::class.java, "rbutton")
         }
 
-        // Define and Initialize Motors
-        motors = arrayOf(
-                hwMap!!.dcMotor.get("front left drive"),
-                hwMap!!.dcMotor.get("front right drive"),
-                hwMap!!.dcMotor.get("back left drive"),
-                hwMap!!.dcMotor.get("back right drive"))
+        if (useMotors) {
+            // Define and Initialize Motors
+            motors = arrayOf(
+                    hwMap!!.dcMotor.get("front left drive"),
+                    hwMap!!.dcMotor.get("front right drive"),
+                    hwMap!!.dcMotor.get("back left drive"),
+                    hwMap!!.dcMotor.get("back right drive"))
 
-        // Set all motors to zero power and to run without encoders
-        motors.forEach {
-            it!!.power = 0.0
-            it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
-            it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+            // Set all motors to zero power and to run without encoders
+            motors.forEach {
+                it!!.power = 0.0
+                it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
+                it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+            }
+
+            Thread.sleep(50)
+            motors.forEach {
+                it!!.mode = motorMode
+            }
+
+            motors[0]!!.direction = DcMotorSimple.Direction.REVERSE
+            motors[1]!!.direction = DcMotorSimple.Direction.FORWARD
+            motors[2]!!.direction = DcMotorSimple.Direction.REVERSE
+            motors[3]!!.direction = DcMotorSimple.Direction.FORWARD
         }
-
-        Thread.sleep(50)
-        motors.forEach {
-            it!!.mode = motorMode
-            if (motorMode == DcMotor.RunMode.RUN_TO_POSITION)
-                it.power = 1.0
-        }
-
-        motors[0]!!.direction = DcMotorSimple.Direction.REVERSE
-        motors[1]!!.direction = DcMotorSimple.Direction.FORWARD
-        motors[2]!!.direction = DcMotorSimple.Direction.REVERSE
-        motors[3]!!.direction = DcMotorSimple.Direction.FORWARD
 
         if (useVuforia) {
             // Vuforia initialization, setup
