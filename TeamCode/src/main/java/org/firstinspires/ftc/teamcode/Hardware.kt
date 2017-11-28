@@ -165,7 +165,7 @@ class Hardware(private var hwMap : HardwareMap?,
         when (driveMode) {
             DriveMode.Holonomic -> holonomic(x, y, θ)
             DriveMode.Mecanum -> mecanum(x, y, θ)
-            else -> mode.telemetry.addData("Error", "Called Hardware::Drive, current driveMode not found")
+            else -> mode.telemetry.addData("Error", "Called Hardware::drive, current driveMode not found")
         }
     }
 
