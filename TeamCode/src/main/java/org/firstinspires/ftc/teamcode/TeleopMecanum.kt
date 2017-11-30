@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
+import com.qualcomm.robotcore.hardware.DcMotor
 
 /**
  * Created by ethan on 7/29/17.
@@ -12,6 +13,7 @@ class TeleopMecanum : OpMode() {
 
     /* Declare OpMode members. */
     private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum) // use the class created to define a robot's hardware
+    private val armHalf = 700
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -43,30 +45,44 @@ class TeleopMecanum : OpMode() {
         // Run the robot drive in mecanum mode
         robot.drive(-gamepad1.left_stick_x, -gamepad1.left_stick_y, -gamepad1.right_stick_x)
 
-        if (gamepad1.a) {
-            robot.motors["arm"]!![0].power = 1.0
-        } else if (gamepad1.b) {
-            robot.motors["arm"]!![0].power = -1.0
-        } else {
-            robot.motors["arm"]!![0].power = 0.0
+        when {
+            gamepad1.a -> {
+                robot.motors["arm"]!![0].power = 1.0
+            }
+            gamepad1.b -> {
+                robot.motors["arm"]!![0].power = -1.0
+            }
+            else -> robot.motors["arm"]!![0].power = 0.0
         }
 
+        // (robot.motors["arm"]!![0])
+        robot.motors["arm"]!![0].power.plus({ m : DcMotor ->
+            when {
+                m.currentPosition > armHalf + 20 -> -0.1
+                m.currentPosition < armHalf - 20 -> 0.1
+                else -> 0.0
+            }
+        }(robot.motors["arm"]!![0]))
         robot.motors["arm"]!![1].power = robot.motors["arm"]!![0].power
 
-        if (gamepad1.dpad_up) {
-            robot.motors["arm"]!![2].power = 1.0
-        } else if (gamepad1.dpad_down) {
-            robot.motors["arm"]!![2].power = -1.0
-        } else {
-            robot.motors["arm"]!![2].power = 0.0
+        when {
+            gamepad1.dpad_up ->
+                robot.motors["arm"]!![2].power = 1.0
+            gamepad1.dpad_down ->
+                robot.motors["arm"]!![2].power = -1.0
+            else -> robot.motors["arm"]!![2].power = 0.0
         }
 
-        if (gamepad1.dpad_left) {
-            robot.motors["arm"]!![3].power = 1.0
-        } else if (gamepad1.dpad_right) {
-            robot.motors["arm"]!![3].power = -1.0
-        } else {
-            robot.motors["arm"]!![3].power = 0.0
+        when {
+            gamepad1.dpad_left -> robot.motors["arm"]!![3].power = 1.0
+            gamepad1.dpad_right -> robot.motors["arm"]!![3].power = -1.0
+            else -> robot.motors["arm"]!![3].power = 0.0
+        }
+
+        for ((_, list) in robot.motors) {
+            list.forEach { motor ->
+                telemetry.addData(motor.deviceName, motor.power)
+            }
         }
     }
 

@@ -17,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables
 class Hardware(private var hwMap : HardwareMap?,
                private var mode : OpMode,
                private var driveMode : DriveMode,
+               private var newSensors : Boolean = false,
                private var useSensors : Boolean = false,
                private var useVuforia : Boolean = false,
                private var useMotors : Boolean = true) {
@@ -26,7 +27,7 @@ class Hardware(private var hwMap : HardwareMap?,
     var revButton: DigitalChannel? = null
 
     // Vuforia members
-    var vuforia: VuforiaLocalizer? = null
+    private var vuforia: VuforiaLocalizer? = null
     private var cameraMonitorViewId : Int? = null
     private var vuforiaParams : VuforiaLocalizer.Parameters? = null
     private val vuforiaKey =
@@ -39,7 +40,7 @@ class Hardware(private var hwMap : HardwareMap?,
 
     // VuMark specific
     var relicTrackables : VuforiaTrackables? = null
-    var relicTemplate : VuforiaTrackable? = null
+    private var relicTemplate : VuforiaTrackable? = null
 
     enum class COLORS {
         RED,
@@ -70,6 +71,10 @@ class Hardware(private var hwMap : HardwareMap?,
             revButton = hwMap!!.get(DigitalChannel::class.java, "rbutton")
         }
 
+        if (newSensors) {
+            colorSensor = hwMap!!.get(ColorSensor::class.java, "arm color")
+        }
+
         if (useMotors) {
             // Define and Initialize Motors
             motors["drive"] = arrayOf(
@@ -87,34 +92,29 @@ class Hardware(private var hwMap : HardwareMap?,
             )
 
             // Set all motors to zero power and to run without encoders
-            motors["drive"]!!.forEach {
-                it.power = 0.0
-                it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
-                it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+            for ((_, motorList) in motors) {
+                motorList.forEach {
+                    it.power = 0.0
+                    it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
+                    it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+                }
             }
-
-            motors["arm"]!!.forEach {
-                it.power = 0.0
-                it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
-                it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
-            }
-
 
             Thread.sleep(50)
-            motors["drive"]!!.forEach {
-                it.mode = motorMode
+
+            for ((_, motorList) in motors) {
+                motorList.forEach {
+                    it.mode = motorMode
+                }
             }
 
-            motors["drive"]!!.forEach {
-                it.mode = motorMode
-            }
-
-            motors["drive"]!![0].direction = DcMotorSimple.Direction.REVERSE
-            motors["drive"]!![1].direction = DcMotorSimple.Direction.FORWARD
-            motors["drive"]!![2].direction = DcMotorSimple.Direction.REVERSE
-            motors["drive"]!![3].direction = DcMotorSimple.Direction.FORWARD
-            motors["arm"]!![0].direction = DcMotorSimple.Direction.FORWARD
-            motors["arm"]!![1].direction = DcMotorSimple.Direction.REVERSE
+            motors["drive"]!![0].direction = DcMotorSimple.Direction.FORWARD
+            motors["drive"]!![1].direction = DcMotorSimple.Direction.REVERSE
+            motors["drive"]!![2].direction = DcMotorSimple.Direction.FORWARD
+            motors["drive"]!![3].direction = DcMotorSimple.Direction.REVERSE
+            motors["arm"]!![0].direction = DcMotorSimple.Direction.REVERSE
+            motors["arm"]!![1].direction = DcMotorSimple.Direction.FORWARD
+            motors["arm"]!![2].direction = DcMotorSimple.Direction.REVERSE
         }
 
         if (useVuforia) {
@@ -147,16 +147,16 @@ class Hardware(private var hwMap : HardwareMap?,
 
     private fun holonomic(x : Float, y : Float, θ : Float) {
         val fl = -x + y - θ
-        val fr =  x + y + θ
-        val bl =  x + y - θ
+        val fr = x + y + θ
+        val bl = x + y - θ
         val br = -x + y + θ
         setDrive(fl, fr, bl, br)
     }
 
     private fun mecanum(x : Float, y : Float, θ : Float) {
-        val fl = x + y + θ
-        val fr = x + y + θ
-        val bl = x + y + θ
+        val fl = x - y + θ
+        val fr = x - y - θ
+        val bl = x + y - θ
         val br = x + y + θ
         setDrive(fl, fr, bl, br)
     }

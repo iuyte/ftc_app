@@ -11,7 +11,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.*
 
 @Autonomous(name = "Regular Auton", group = "Robot")
 
-class   RegAuton : LinearOpMode() {
+class RegAuton : LinearOpMode() {
 
     /* Declare OpMode members. */
     private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, true, true) // use the class created to define a robot's hardware

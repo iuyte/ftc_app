@@ -47,13 +47,11 @@ class BatteryTest : OpMode() {
             telemetry.addData("died at", elasped)
         }
 
-        telemetry.addData("starting voltage", startVoltage)
-                 .addData("power", v)
-                 .addData("voltage drop", startVoltage - v)
-                 .addData(
-                         "drop rate",
-                         "%f mV/ms",
-                         (startVoltage - v) * 1000 / period.milliseconds())
+        telemetry
+                .addData("starting voltage", startVoltage)
+                .addData("power", v)
+                .addData("voltage drop", startVoltage - v)
+                .addData("drop rate", "%f mV/ms", (startVoltage - v) * 1000 / period.milliseconds())
         telemetry.update()
     }
 
