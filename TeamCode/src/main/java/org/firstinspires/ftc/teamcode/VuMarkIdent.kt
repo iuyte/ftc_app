@@ -9,32 +9,32 @@ import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark
  * Created by ethan on 11/4/2017.
  */
 
-@Autonomous(name="VuMark Id", group ="VuMarks")
+@Autonomous(name = "VuMark Id", group = "VuMarks")
 class VuMarkIdent : LinearOpMode() {
 
-    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, false, true, false) // use the class created to define a robot's hardware
+	private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, false, true, false) // use the class created to define a robot's hardware
 
-    override fun runOpMode() {
-        robot.init(hardwareMap)
-        telemetry.addData(">", "Press Play to start")
-        telemetry.update()
-        waitForStart()
+	override fun runOpMode() {
+		robot.init(hardwareMap)
+		telemetry.addData(">", "Press Play to start")
+		telemetry.update()
+		waitForStart()
 
-        robot.relicTrackables!!.activate()
+		robot.relicTrackables!!.activate()
 
-        while (opModeIsActive()) {
-            var vuMark = robot.vuMark()
-            if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
+		while (opModeIsActive()) {
+			val vuMark = robot.vuMark
+			if (vuMark != RelicRecoveryVuMark.UNKNOWN) {
 
-                /* Found an instance of the template. In the actual game, you will probably
-                 * loop until this condition occurs, then move on to act accordingly depending
-                 * on which VuMark was visible. */
-                telemetry.addData("VuMark", "%s visible", vuMark)
-            } else {
-                telemetry.addData("VuMark", "not visible")
-            }
+				/* Found an instance of the template. In the actual game, you will probably
+				 * loop until this condition occurs, then move on to act accordingly depending
+				 * on which VuMark was visible. */
+				telemetry.addData("VuMark", "%s visible", vuMark)
+			} else {
+				telemetry.addData("VuMark", "not visible")
+			}
 
-            telemetry.update()
-        }
-    }
+			telemetry.update()
+		}
+	}
 }

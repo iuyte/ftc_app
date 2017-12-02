@@ -3,87 +3,50 @@ package org.firstinspires.ftc.teamcode
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.hardware.DcMotor
-
-import com.qualcomm.hardware.bosch.BNO055IMU
-import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator
-
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference
+import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark
 
 /**
  * Created by ethan on 7/29/17.
  */
 
 @Autonomous(name = "Test Auton", group = "Robot")
-
 class AutonTest : LinearOpMode() {
 
-    /* Declare OpMode members. */
-    private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Holonomic, true) // use the class created to define a robot's hardware
-    private var imu: BNO055IMU? = null
-    private var angle : Float = 0f
+	/* Declare OpMode members. */
+	private var robot = Hardware(
+			hardwareMap,
+			this,
+			Hardware.DriveMode.Mecanum,
+			true,
+			false,
+			true
+	)
 
-    override fun runOpMode() {
-        /*
-         * Initialize the hardware variables.
-         * The init() method of the hardware class does all the work here
-         */
-        robot.init(hardwareMap, DcMotor.RunMode.RUN_TO_POSITION)
+	override fun runOpMode() {
+		/*
+		 * Initialize the hardware variables.
+		 * The init() method of the hardware class does all the work here
+		 */
+		robot.init(hardwareMap, DcMotor.RunMode.RUN_TO_POSITION, { opModeIsActive() })
 
-        val parameters = BNO055IMU.Parameters()
-        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES
-        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC
-        parameters.loggingEnabled = true
-        parameters.useExternalCrystal = true
-        parameters.mode = BNO055IMU.SensorMode.IMU
-        parameters.calibrationDataFile = "BNO055IMUCalibration.json"
-        parameters.loggingTag = "IMU"
-        parameters.accelerationIntegrationAlgorithm = JustLoggingAccelerationIntegrator()
-        imu = hardwareMap.get(BNO055IMU::class.java, "imu")
-        imu!!.initialize(parameters)
+		waitForStart()
 
-        waitForStart()
+		robot.relicTrackables!!.activate()
+		var vuMark: RelicRecoveryVuMark
+		do {
+			vuMark = robot.vuMark
+			telemetry.addData("VuMark", "%s visible", vuMark)
+			robot.update()
+		} while (vuMark == RelicRecoveryVuMark.UNKNOWN)
+		robot.relicTrackables!!.deactivate()
 
-        robot.motors["drive"]!![0].targetPosition = 7500
-        robot.motors["drive"]!![1].targetPosition = 7500
-        robot.motors["drive"]!![2].targetPosition = 7500
-        robot.motors["drive"]!![3].targetPosition = 7500
+		robot.setDriveTargets(arrayOf(
+				7500.0,
+				7500.0,
+				7500.0,
+				7500.0
+		), 0.7)
 
-        robot.motors["drive"]!!.forEach { motor ->
-            motor.power = 0.7
-        }
-
-        robot.motors["drive"]!!.forEach {
-            while (it.isBusy && it.currentPosition < it.targetPosition && opModeIsActive()) {
-                angle = imu!!.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES)!!.firstAngle
-                robot.motors["drive"]!!.forEach { m ->
-                    m.targetPosition = if (m.isBusy) m.targetPosition else m.currentPosition + 1
-                }
-
-                when {
-                    angle > 0 -> {
-                        robot.motors["drive"]!![0].power = .7 - (angle / 5)
-                        robot.motors["drive"]!![2].power = .7 - (angle / 5)
-                    }
-                    angle < 0 -> {
-                        robot.motors["drive"]!![1].power = .7 + (angle / 5)
-                        robot.motors["drive"]!![3].power = .7 + (angle / 5)
-                    }
-                    else -> {
-                        robot.motors["drive"]!!.forEach { m ->
-                            m.power = .7
-                        }
-                    }
-                }
-
-                robot.motors["drive"]!!.forEach {
-                    telemetry.addData(it.deviceName, "%d", it.currentPosition)
-                }
-                telemetry.addData("Angle", angle)
-                telemetry.update()
-                robot.waitForTick(25)
-            }
-        }
-    }
+		robot.linearPositionAngle(.07, 0.0)
+	}
 }

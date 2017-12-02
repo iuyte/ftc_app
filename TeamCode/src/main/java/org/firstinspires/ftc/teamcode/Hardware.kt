@@ -1,9 +1,21 @@
 package org.firstinspires.ftc.teamcode
 
+import com.qualcomm.hardware.bosch.BNO055IMU
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator
 import com.qualcomm.robotcore.eventloop.opmode.OpMode
-import com.qualcomm.robotcore.hardware.*
+import com.qualcomm.robotcore.hardware.CRServo
+import com.qualcomm.robotcore.hardware.ColorSensor
+import com.qualcomm.robotcore.hardware.DcMotor
+import com.qualcomm.robotcore.hardware.DcMotorSimple
+import com.qualcomm.robotcore.hardware.DigitalChannel
+import com.qualcomm.robotcore.hardware.DistanceSensor
+import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.util.ElapsedTime
 import org.firstinspires.ftc.robotcore.external.ClassFactory
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation
 import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable
@@ -14,197 +26,304 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables
  */
 
 /* Makes moving with the robot easier */
-class Hardware(private var hwMap : HardwareMap?,
-               private var mode : OpMode,
-               private var driveMode : DriveMode,
-               private var newSensors : Boolean = false,
-               private var useSensors : Boolean = false,
-               private var useVuforia : Boolean = false,
-               private var useMotors : Boolean = true) {
-    // Color sensor
-    var colorSensor: ColorSensor? = null
-    var button: DigitalChannel? = null
-    var revButton: DigitalChannel? = null
+class Hardware(
+		private var hwMap: HardwareMap?,
+		private var mode: OpMode,
+		private var driveMode: DriveMode,
+		private var newSensors: Boolean = false,
+		private var useSensors: Boolean = false,
+		private var useVuforia: Boolean = false,
+		private var useMotors: Boolean = true) {
+	// Time elapsed
+	private val period = ElapsedTime()
+	private var isActive: () -> Boolean = {
+		false
+	}
+	// Color sensor
+	var armColor: ColorSensor? = null
+	var jewelColor: ColorSensor? = null
+	var button: DigitalChannel? = null
+	var revButton: DigitalChannel? = null
+	var distance: DistanceSensor? = null
 
-    // Vuforia members
-    private var vuforia: VuforiaLocalizer? = null
-    private var cameraMonitorViewId : Int? = null
-    private var vuforiaParams : VuforiaLocalizer.Parameters? = null
-    private val vuforiaKey =
-            "AQ+eJzP/////AAAAGQ6Eyl3tQ0fqvcl2vinKWkR8t2wTESOSuHo32BhQvWxRBBxt+4C2BtrXTh" +
-                    "Ygcyd9fzaZ1tTjW8viQzNJAVYyL50GIG+hKJb6mHRq/iYJ53ve+oETR1t5ZBaVmq2l" +
-                    "qljNaxyRJURYSLp52UoNi2RpvW0xvVIZ4KBoClIUI4KRkiozACNg0GsxDIDnAiBx5i" +
-                    "iPfug5PklSyPnKHkhKf+mtRhoY8HcittFKh4lQkI5LtJOm6lH/K6CCa7RzVUkRbI9m" +
-                    "bxVybXiOLtpN/Yr+FDS0bM19czvflS+URyrO2J5APOipQ1XZ1wieP/wp75NFXkV0V3" +
-                    "hWcVAkWHQr9aJhZtkYUGjrb94QP7OOF7h6Ftl+ls2j"
+	// Vuforia members
+	var vuforia: VuforiaLocalizer? = null
+	// private var cameraMonitorViewId : Int? = null
+	private var vuforiaParams: VuforiaLocalizer.Parameters? = null
+	private val vuforiaKey =
+			"AQ+eJzP/////AAAAGQ6Eyl3tQ0fqvcl2vinKWkR8t2wTESOSuHo32BhQvWxRBBxt+4C2BtrXTh" +
+					"Ygcyd9fzaZ1tTjW8viQzNJAVYyL50GIG+hKJb6mHRq/iYJ53ve+oETR1t5ZBaVmq2l" +
+					"qljNaxyRJURYSLp52UoNi2RpvW0xvVIZ4KBoClIUI4KRkiozACNg0GsxDIDnAiBx5i" +
+					"iPfug5PklSyPnKHkhKf+mtRhoY8HcittFKh4lQkI5LtJOm6lH/K6CCa7RzVUkRbI9m" +
+					"bxVybXiOLtpN/Yr+FDS0bM19czvflS+URyrO2J5APOipQ1XZ1wieP/wp75NFXkV0V3" +
+					"hWcVAkWHQr9aJhZtkYUGjrb94QP7OOF7h6Ftl+ls2j"
 
-    // VuMark specific
-    var relicTrackables : VuforiaTrackables? = null
-    private var relicTemplate : VuforiaTrackable? = null
+	// VuMark specific
+	var relicTrackables: VuforiaTrackables? = null
+	private var relicTemplate: VuforiaTrackable? = null
 
-    enum class COLORS {
-        RED,
-        BLUE,
-        NONE,
-    }
+	// Colors
+	enum class COLORS {
+		RED,
+		BLUE,
+		NONE,
+	}
 
-    /* The motors on the drive */
-    var motors: MutableMap<String, Array<DcMotor>> = mutableMapOf()
+	// The IMU
+	private var imu: BNO055IMU? = null
+	private var orientation: Orientation? = null
 
-    /* private OpMode members. */
-    private val period = ElapsedTime()
+	/* The motors */
+	var motors: MutableMap<String, Array<DcMotor>> = mutableMapOf()
 
-    /* The different drive modes */
-    enum class DriveMode {
-        Tank,
-        Holonomic,
-        Mecanum,
-    }
+	var jewel: CRServo? = null
+	var roller: MutableList<CRServo> = mutableListOf()
 
-    /* Initialize standard Hardware interfaces */
-    fun init(awMap : HardwareMap?, motorMode : DcMotor.RunMode = DcMotor.RunMode.RUN_WITHOUT_ENCODER) {
-        hwMap = awMap!!
-        if (useSensors) {
-            // Initialize sensors
-            colorSensor = hwMap!!.get(ColorSensor::class.java, "rev color")
-            button = hwMap!!.get(DigitalChannel::class.java, "button")
-            revButton = hwMap!!.get(DigitalChannel::class.java, "rbutton")
-        }
+	// Motor power multiplier for the front motors when strafing (helps to correct heavy back)
+	private val frontStrafe = .4
 
-        if (newSensors) {
-            colorSensor = hwMap!!.get(ColorSensor::class.java, "arm color")
-        }
+	/* The different drive modes */
+	enum class DriveMode {
+		Tank,
+		Holonomic,
+		Mecanum,
+	}
 
-        if (useMotors) {
-            // Define and Initialize Motors
-            motors["drive"] = arrayOf(
-                    hwMap!!.dcMotor["front left drive"]!!,
-                    hwMap!!.dcMotor["front right drive"]!!,
-                    hwMap!!.dcMotor["back left drive"]!!,
-                    hwMap!!.dcMotor["back right drive"]!!
-            )
+	/* Initialize standard Hardware interfaces */
+	fun init(awMap: HardwareMap?, motorMode: DcMotor.RunMode = DcMotor.RunMode.RUN_WITHOUT_ENCODER, active: () -> Boolean = { false }) {
+		hwMap = awMap
+		isActive = active
+		if (useSensors) {
+			// Initialize sensors
+			armColor = hwMap!!.get(ColorSensor::class.java, "rev color")
+			button = hwMap!!.get(DigitalChannel::class.java, "button")
+			revButton = hwMap!!.get(DigitalChannel::class.java, "rButton")
+		}
 
-            motors["arm"] = arrayOf(
-                    hwMap!!.dcMotor["left lift motor"]!!,
-                    hwMap!!.dcMotor["right lift motor"]!!,
-                    hwMap!!.dcMotor["claw control motor"]!!,
-                    hwMap!!.dcMotor["claw motor"]!!
-            )
+		if (newSensors) {
+			armColor = hwMap!!.get(ColorSensor::class.java, "arm color")
+			distance = hwMap!!.get(DistanceSensor::class.java, "arm color")
+			jewelColor = hwMap!!.get(ColorSensor::class.java, "jewel color")
 
-            // Set all motors to zero power and to run without encoders
-            for ((_, motorList) in motors) {
-                motorList.forEach {
-                    it.power = 0.0
-                    it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
-                    it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
-                }
-            }
+			val parameters = BNO055IMU.Parameters()
+			parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES
+			parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC
+			parameters.loggingEnabled = true
+			parameters.useExternalCrystal = true
+			parameters.mode = BNO055IMU.SensorMode.IMU
+			parameters.calibrationDataFile = "BNO055IMUCalibration.json"
+			parameters.loggingTag = "IMU"
+			parameters.accelerationIntegrationAlgorithm = JustLoggingAccelerationIntegrator()
+			imu = hwMap!!.get(BNO055IMU::class.java, "imu")
+			imu!!.initialize(parameters)
+		}
 
-            Thread.sleep(50)
+		if (useMotors) {
+			// Define and Initialize Motors
+			motors["drive"] = arrayOf(
+					hwMap!!.dcMotor["front left drive"]!!,
+					hwMap!!.dcMotor["front right drive"]!!,
+					hwMap!!.dcMotor["back left drive"]!!,
+					hwMap!!.dcMotor["back right drive"]!!
+			)
 
-            for ((_, motorList) in motors) {
-                motorList.forEach {
-                    it.mode = motorMode
-                }
-            }
+			motors["arm"] = arrayOf(
+					hwMap!!.dcMotor["left lift motor"]!!,
+					hwMap!!.dcMotor["right lift motor"]!!,
+					hwMap!!.dcMotor["claw control motor"]!!
+			)
 
-            motors["drive"]!![0].direction = DcMotorSimple.Direction.FORWARD
-            motors["drive"]!![1].direction = DcMotorSimple.Direction.REVERSE
-            motors["drive"]!![2].direction = DcMotorSimple.Direction.FORWARD
-            motors["drive"]!![3].direction = DcMotorSimple.Direction.REVERSE
-            motors["arm"]!![0].direction = DcMotorSimple.Direction.REVERSE
-            motors["arm"]!![1].direction = DcMotorSimple.Direction.FORWARD
-            motors["arm"]!![2].direction = DcMotorSimple.Direction.REVERSE
-        }
+			jewel = hwMap!!.crservo["jewel vex"]
+			roller = mutableListOf(
+					hwMap!!.crservo["left roller vex"]!!,
+					hwMap!!.crservo["right roller vex"]!!
+			)
 
-        if (useVuforia) {
-            // Vuforia initialization, setup
-            cameraMonitorViewId = hwMap!!.appContext.resources.getIdentifier("cameraMonitorViewId", "id", hwMap!!.appContext.packageName)
-            vuforiaParams = VuforiaLocalizer.Parameters(cameraMonitorViewId!!)
-            vuforiaParams!!.vuforiaLicenseKey = vuforiaKey
-            vuforiaParams!!.cameraDirection = VuforiaLocalizer.CameraDirection.BACK
-            this.vuforia = ClassFactory.createVuforiaLocalizer(vuforiaParams)
+			roller[1].direction = DcMotorSimple.Direction.REVERSE
 
-            relicTrackables = this.vuforia!!.loadTrackablesFromAsset("RelicVuMark")
-            relicTemplate = relicTrackables!![0]
-            relicTemplate!!.name = "relicVuMarkTemplate"
-        }
+			// Set all motors to zero power and to run without encoders
+			for ((_, motorList) in motors) {
+				motorList.forEach {
+					it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
+				}
+			}
 
-        mode.telemetry.addData("Robot", "Initialized!")
-    }
+			Thread.sleep(50)
 
-    fun setDrive(upLeft: Float, upright: Float, downLeft: Float, downright: Float) {
-        motors["drive"]!![0].power = upLeft.toDouble()
-        motors["drive"]!![1].power = upright.toDouble()
-        motors["drive"]!![2].power = downLeft.toDouble()
-        motors["drive"]!![3].power = downright.toDouble()
+			for ((_, motorList) in motors) {
+				motorList.forEach {
+					it.mode = motorMode
+					it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+					it.power = 0.0
+				}
+			}
 
-        // Send telemetry message to signify robot running;
-        motors["drive"]!!.forEach {
-            mode.telemetry.addData(it.deviceName, "%d", it.currentPosition)
-        }
-    }
+			motors["drive"]!![0].direction = DcMotorSimple.Direction.REVERSE
+			motors["drive"]!![1].direction = DcMotorSimple.Direction.FORWARD
+			motors["drive"]!![2].direction = DcMotorSimple.Direction.FORWARD
+			motors["arm"]!![0].direction = DcMotorSimple.Direction.REVERSE
+			motors["arm"]!![1].direction = DcMotorSimple.Direction.FORWARD
+			motors["arm"]!![2].direction = DcMotorSimple.Direction.FORWARD
+		}
 
-    private fun holonomic(x : Float, y : Float, θ : Float) {
-        val fl = -x + y - θ
-        val fr = x + y + θ
-        val bl = x + y - θ
-        val br = -x + y + θ
-        setDrive(fl, fr, bl, br)
-    }
+		if (useVuforia) {
+			// Vuforia initialization, setup
+			// cameraMonitorViewId = hwMap!!.appContext.resources.getIdentifier("cameraMonitorViewId", "id", hwMap!!.appContext.packageName)
+			vuforiaParams = VuforiaLocalizer.Parameters(/* cameraMonitorViewId!! */)
+			vuforiaParams!!.vuforiaLicenseKey = vuforiaKey
+			vuforiaParams!!.cameraDirection = VuforiaLocalizer.CameraDirection.BACK
+			this.vuforia = ClassFactory.createVuforiaLocalizer(vuforiaParams)
 
-    private fun mecanum(x : Float, y : Float, θ : Float) {
-        val fl = x - y + θ
-        val fr = x - y - θ
-        val bl = x + y - θ
-        val br = x + y + θ
-        setDrive(fl, fr, bl, br)
-    }
+			relicTrackables = this.vuforia!!.loadTrackablesFromAsset("RelicVuMark")
+			relicTemplate = relicTrackables!![0]
+			relicTemplate!!.name = "relicVuMarkTemplate"
+		}
 
-    fun drive(x : Float, y : Float, θ : Float) {
-        when (driveMode) {
-            DriveMode.Holonomic -> holonomic(x, y, θ)
-            DriveMode.Mecanum -> mecanum(x, y, θ)
-            else -> mode.telemetry.addData("Error", "Called Hardware::drive, current driveMode not found")
-        }
-    }
+		mode.telemetry.addData("Robot", "Initialized!")
+	}
 
-    fun color(c : ColorSensor? = colorSensor) : COLORS {
-        val rgb = arrayOf(
-                c!!.red(),
-                c.blue(),
-                c.green())
-        if (rgb[0] > rgb[2] + 25) {
-            return COLORS.RED
-        } else if (rgb[2] > rgb[0] + 15) {
-            return COLORS.BLUE
-        }
-        return COLORS.NONE
-    }
+	fun setDrive(upLeft: Double, upright: Double, downLeft: Double, downright: Double) {
+		motors["drive"]!![0].power = upLeft
+		motors["drive"]!![1].power = upright
+		motors["drive"]!![2].power = downLeft
+		motors["drive"]!![3].power = downright
+	}
 
-    fun vuMark() : RelicRecoveryVuMark = RelicRecoveryVuMark.from(relicTemplate)
+	private fun holonomic(x: Double, y: Double, θ: Double) {
+		setDrive(
+				-x * frontStrafe + y - θ,
+				x * frontStrafe + y + θ,
+				x + y - θ,
+				-x + y + θ
+		)
+	}
 
-    /***
+	private fun mecanum(x: Double, y: Double, θ: Double) {
+		val fl = x + y - θ
+		val fr = -x + y + θ
+		val bl = -x + y - θ
+		val br = x + y + θ
+		setDrive(fl, fr, bl, br)
+	}
 
-     * waitForTick implements a periodic delay. However, this acts like a metronome with a regular
-     * periodic tick.  This is used to compensate for varying processing times for each cycle.
-     * The function looks at the elapsed cycle time, and sleeps for the remaining time interval.
+	fun drive(x: Number, y: Number, θ: Number = 0) {
+		val xx = x.toDouble()
+		val yy = y.toDouble()
+		val theta = θ.toDouble()
 
-     * @param periodMs Length of wait cycle in mSec.
-     */
-    fun waitForTick(periodMs: Long) {
-        val remaining = periodMs - period.milliseconds().toLong()
+		when (driveMode) {
+			DriveMode.Holonomic -> holonomic(xx, yy, theta)
+			DriveMode.Mecanum -> mecanum(xx, yy, theta)
+			DriveMode.Tank -> setDrive(xx, xx, yy, yy)
+		}
+	}
 
-        // sleep for the remaining portion of the regular cycle period.
-        if (remaining > 0) {
-            try {
-                Thread.sleep(remaining)
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-            }
-        }
+	fun setDriveTargets(positions: Array<Double>, power : Double? = null) {
+		val drive = motors["drive"]!!
 
-        // Reset the cycle clock for the next pass.
-        period.reset()
-    }
+		for (i in 0..motors["drive"]!!.size) {
+			drive[i].targetPosition = positions[i].toInt()
+			if (power != null) {
+				drive[i].power = power
+			}
+		}
+	}
+
+	fun linearPositionAngle(multiplier: Double, target: Double, tolerance: Long = 7) {
+		val change = multiplier * (target - angle)
+		val drive = motors["drive"]!!
+
+		drive[0].power -= change
+		drive[1].power += change
+		drive[2].power -= change
+		drive[3].power += change
+
+		drive.forEach { motor ->
+			if (Math.abs(motor.targetPosition - motor.currentPosition) > tolerance && isActive()) {
+				update()
+				linearPositionAngle(multiplier, target)
+			} else if (!isActive()) {
+				return@linearPositionAngle
+			}
+		}
+	}
+
+	fun color(c: ColorSensor? = armColor): COLORS {
+		val rgb = arrayOf(
+				c!!.red(),
+				c.blue(),
+				c.green())
+		if (rgb[0] > rgb[2] + 25) {
+			return COLORS.RED
+		} else if (rgb[2] > rgb[0] + 15) {
+			return COLORS.BLUE
+		}
+		return COLORS.NONE
+	}
+
+	val vuMark: RelicRecoveryVuMark
+		get() {
+			return RelicRecoveryVuMark.from(relicTemplate)
+		}
+	val angle: Double
+		get() {
+			return orientation!!.firstAngle.toDouble()
+		}
+	val batteryVoltage: Double
+		get() {
+			var result = java.lang.Double.POSITIVE_INFINITY
+			hwMap!!.voltageSensor.forEach { sensor ->
+				val voltage = sensor.voltage
+				if (voltage > 0) {
+					result = Math.min(result, voltage)
+				}
+			}
+			return result
+		}
+
+	fun update(ms: Number = 25) {
+		if (newSensors) {
+			orientation = imu!!.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES)!!
+			mode.telemetry
+					.addData("Angle", angle)
+					.addData("Jewel", color(jewelColor))
+					.addData("Glyph", color())
+		}
+
+		var i: Int
+		for ((key, list) in motors) {
+			i = 0
+			list.forEach { motor ->
+				mode.telemetry.addData("$key[${i++}]",
+						"${motor.currentPosition}")
+			}
+		}
+
+		mode.telemetry.update()
+		waitForTick(ms.toLong())
+	}
+
+	/***
+
+	 * waitForTick implements a periodic delay. However, this acts like a metronome with a regular
+	 * periodic tick.  This is used to compensate for varying processing times for each cycle.
+	 * The function looks at the elapsed cycle time, and sleeps for the remaining time interval.
+
+	 * @param periodMs Length of wait cycle in mSec.
+	 */
+	fun waitForTick(periodMs: Long) {
+		val remaining = periodMs - period.milliseconds().toLong()
+
+		// sleep for the remaining portion of the regular cycle period.
+		if (remaining > 0) {
+			try {
+				Thread.sleep(remaining)
+			} catch (e: InterruptedException) {
+				Thread.currentThread().interrupt()
+			}
+		}
+
+		// Reset the cycle clock for the next pass.
+		period.reset()
+	}
 }
