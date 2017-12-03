@@ -12,9 +12,11 @@ import com.qualcomm.robotcore.hardware.DcMotor
 class TeleopMecanum : OpMode() {
 
 	/* Declare OpMode members. */
-	private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum, true) // use the class created to define a robot's hardware
-	// private val armHalf = 1100
+	private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum, false) // use the class created to define a robot's hardware
 	private var speedMultiplier = 0.0
+	private val liftPower = 0.8
+	private val liftMove = 100
+	private var liftStop = false
 
 	/*
 	 * Code to run ONCE when the driver hits INIT
@@ -24,6 +26,10 @@ class TeleopMecanum : OpMode() {
 		 * The init() method of the hardware class does all the work here
 		 */
 		robot.init(hardwareMap, DcMotor.RunMode.RUN_USING_ENCODER)
+		for (i in 0..1) {
+			robot.motors["arm"]!![i].mode = DcMotor.RunMode.RUN_TO_POSITION
+			robot.motors["arm"]!![i].power = liftPower
+		}
 
 		// Send telemetry message to signify robot waiting;
 		telemetry.addData("Initialization", "Complete")
@@ -43,40 +49,41 @@ class TeleopMecanum : OpMode() {
 	 * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
 	 */
 	override fun loop() {
-		speedMultiplier = 1.0 - (gamepad1.left_trigger.toDouble() * 0.9)
+		speedMultiplier = 1.0 - (gamepad1.left_trigger.toDouble() * 0.45) -
+				(if (gamepad2.b) 0.0 else 0.3)
 
 		// Run the robot drive in mecanum mode
 		robot.drive(
-				-gamepad1.left_stick_x * speedMultiplier,
-				-gamepad1.left_stick_y * speedMultiplier,
-				-gamepad1.right_stick_x * speedMultiplier
+			-gamepad1.left_stick_x * speedMultiplier,
+			-gamepad1.left_stick_y * speedMultiplier,
+			-gamepad1.right_stick_x * speedMultiplier
 		)
 
 		when {
 			gamepad1.right_bumper || gamepad2.right_bumper -> {
-				robot.motors["arm"]!![0].power = 0.8 * speedMultiplier
+				robot.motors["arm"]!![0].targetPosition = robot.motors["arm"]!![0].currentPosition + liftMove
 			}
 			gamepad1.right_trigger > 0.1 || gamepad2.right_trigger > 0.1 -> {
-				robot.motors["arm"]!![0].power = -0.8 * speedMultiplier
+				robot.motors["arm"]!![0].targetPosition = robot.motors["arm"]!![0].currentPosition - liftMove
 			}
-			else -> robot.motors["arm"]!![0].power = 0.0
+			else -> robot.motors["arm"]!![0].targetPosition = robot.motors["arm"]!![0].currentPosition
 		}
-
-		/*
-		robot.motors["arm"]!![0].power = { m : DcMotor, current : Double ->
-			// val multiplier : Double = 1 / robot.batteryVoltage / 14
-			when {
-				m.currentPosition > armHalf + 70 -> current // * multiplier
-				m.currentPosition < armHalf - 70 -> current // * multiplier
-				else -> 0.0
-			} } (robot.motors["arm"]!![0], robot.motors["arm"]!![0].power) // */
-		robot.motors["arm"]!![1].power = robot.motors["arm"]!![0].power
+		robot.motors["arm"]!![1].targetPosition = robot.motors["arm"]!![0].targetPosition
 
 		when {
-			gamepad1.dpad_up || gamepad2.left_bumper ->
+			(gamepad1.dpad_up || gamepad2.left_bumper) && !robot.button!!.state && !liftStop ->
 				robot.motors["arm"]!![2].power = 1.0 * speedMultiplier
-			gamepad1.dpad_down || gamepad2.left_trigger > 0.1 ->
+
+			gamepad1.dpad_down || gamepad2.left_trigger > 0.1 -> {
 				robot.motors["arm"]!![2].power = -1.0 * speedMultiplier
+				liftStop = false
+			}
+
+			robot.button!!.state -> {
+				liftStop = true
+				robot.motors["arm"]!![2].power = 0.0
+			}
+
 			else -> robot.motors["arm"]!![2].power = 0.0
 		}
 
@@ -87,12 +94,11 @@ class TeleopMecanum : OpMode() {
 		}
 		robot.roller[1].power = robot.roller[0].power
 
-		robot.update()
+		robot.update(0)
 	}
 
 	/*
 	 * Code to run ONCE after the driver hits STOP
 	 */
 	override fun stop() {}
-
 }

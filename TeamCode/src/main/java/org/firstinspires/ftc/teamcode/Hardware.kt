@@ -32,7 +32,7 @@ class Hardware(
 		private var driveMode: DriveMode,
 		private var newSensors: Boolean = false,
 		private var useSensors: Boolean = false,
-		private var useVuforia: Boolean = false,
+		public  var useVuforia: Boolean = false,
 		private var useMotors: Boolean = true) {
 	// Time elapsed
 	private val period = ElapsedTime()
@@ -74,13 +74,13 @@ class Hardware(
 	private var orientation: Orientation? = null
 
 	/* The motors */
-	var motors: MutableMap<String, Array<DcMotor>> = mutableMapOf()
+	var motors: Map<String, Array<DcMotor>> = mapOf()
 
 	var jewel: CRServo? = null
-	var roller: MutableList<CRServo> = mutableListOf()
+	var roller: List<CRServo> = listOf()
 
 	// Motor power multiplier for the front motors when strafing (helps to correct heavy back)
-	private val frontStrafe = .4
+	private val frontStrafe = 1.0
 
 	/* The different drive modes */
 	enum class DriveMode {
@@ -90,80 +90,96 @@ class Hardware(
 	}
 
 	/* Initialize standard Hardware interfaces */
-	fun init(awMap: HardwareMap?, motorMode: DcMotor.RunMode = DcMotor.RunMode.RUN_WITHOUT_ENCODER, active: () -> Boolean = { false }) {
-		hwMap = awMap
-		isActive = active
-		if (useSensors) {
-			// Initialize sensors
-			armColor = hwMap!!.get(ColorSensor::class.java, "rev color")
-			button = hwMap!!.get(DigitalChannel::class.java, "button")
-			revButton = hwMap!!.get(DigitalChannel::class.java, "rButton")
-		}
+	fun init(awMap: HardwareMap?, motorMode: DcMotor.RunMode = DcMotor.RunMode.RUN_USING_ENCODER, active: () -> Boolean = { false }) {
+		try {
+			hwMap = awMap
+			isActive = active
+			mode.telemetry!!.addData("Robot", "Initializing")
 
-		if (newSensors) {
-			armColor = hwMap!!.get(ColorSensor::class.java, "arm color")
-			distance = hwMap!!.get(DistanceSensor::class.java, "arm color")
-			jewelColor = hwMap!!.get(ColorSensor::class.java, "jewel color")
+			button = hwMap!!.digitalChannel["button"]
+			button!!.mode = DigitalChannel.Mode.INPUT
 
-			val parameters = BNO055IMU.Parameters()
-			parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES
-			parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC
-			parameters.loggingEnabled = true
-			parameters.useExternalCrystal = true
-			parameters.mode = BNO055IMU.SensorMode.IMU
-			parameters.calibrationDataFile = "BNO055IMUCalibration.json"
-			parameters.loggingTag = "IMU"
-			parameters.accelerationIntegrationAlgorithm = JustLoggingAccelerationIntegrator()
-			imu = hwMap!!.get(BNO055IMU::class.java, "imu")
-			imu!!.initialize(parameters)
-		}
-
-		if (useMotors) {
-			// Define and Initialize Motors
-			motors["drive"] = arrayOf(
-					hwMap!!.dcMotor["front left drive"]!!,
-					hwMap!!.dcMotor["front right drive"]!!,
-					hwMap!!.dcMotor["back left drive"]!!,
-					hwMap!!.dcMotor["back right drive"]!!
-			)
-
-			motors["arm"] = arrayOf(
-					hwMap!!.dcMotor["left lift motor"]!!,
-					hwMap!!.dcMotor["right lift motor"]!!,
-					hwMap!!.dcMotor["claw control motor"]!!
-			)
-
-			jewel = hwMap!!.crservo["jewel vex"]
-			roller = mutableListOf(
-					hwMap!!.crservo["left roller vex"]!!,
-					hwMap!!.crservo["right roller vex"]!!
-			)
-
-			roller[1].direction = DcMotorSimple.Direction.REVERSE
-
-			// Set all motors to zero power and to run without encoders
-			for ((_, motorList) in motors) {
-				motorList.forEach {
-					it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
-				}
+			if (useSensors) {
+				// Initialize sensors
+				armColor = hwMap!!.get(ColorSensor::class.java, "rev color")
+				button = hwMap!!.get(DigitalChannel::class.java, "button")
+				revButton = hwMap!!.get(DigitalChannel::class.java, "rButton")
 			}
 
-			Thread.sleep(50)
+			if (newSensors) {
+				armColor = hwMap!!.colorSensor["arm color"]
+				distance = hwMap!!.get(DistanceSensor::class.java, "arm color")
+				jewelColor = hwMap!!.colorSensor["jewel color"]
 
-			for ((_, motorList) in motors) {
-				motorList.forEach {
-					it.mode = motorMode
-					it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
-					it.power = 0.0
-				}
+				val parameters = BNO055IMU.Parameters()
+				parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES
+				parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC
+				parameters.loggingEnabled = true
+				parameters.useExternalCrystal = true
+				parameters.mode = BNO055IMU.SensorMode.IMU
+				parameters.calibrationDataFile = "BNO055IMUCalibration.json"
+				parameters.loggingTag = "IMU"
+				parameters.accelerationIntegrationAlgorithm = JustLoggingAccelerationIntegrator()
+				imu = hwMap!!.get(BNO055IMU::class.java, "imu")
+				imu!!.initialize(parameters)
 			}
+		} catch (_: KotlinNullPointerException) {
+			mode.telemetry!!.addData("Sensors", "Error initializing")
+		}
 
-			motors["drive"]!![0].direction = DcMotorSimple.Direction.REVERSE
-			motors["drive"]!![1].direction = DcMotorSimple.Direction.FORWARD
-			motors["drive"]!![2].direction = DcMotorSimple.Direction.FORWARD
-			motors["arm"]!![0].direction = DcMotorSimple.Direction.REVERSE
-			motors["arm"]!![1].direction = DcMotorSimple.Direction.FORWARD
-			motors["arm"]!![2].direction = DcMotorSimple.Direction.FORWARD
+		try {
+			if (useMotors) {
+				// Define and Initialize Motors
+				motors = mapOf(
+						Pair("drive", arrayOf(
+								hwMap!!.dcMotor["front left drive"]!!,
+								hwMap!!.dcMotor["front right drive"]!!,
+								hwMap!!.dcMotor["back left drive"]!!,
+								hwMap!!.dcMotor["back right drive"]!!
+						)),
+
+						Pair("arm", arrayOf(
+								hwMap!!.dcMotor["left lift motor"]!!,
+								hwMap!!.dcMotor["right lift motor"]!!,
+								hwMap!!.dcMotor["claw control motor"]!!
+						))
+				)
+
+				jewel = hwMap!!.crservo["jewel vex"]
+				roller = listOf(
+						hwMap!!.crservo["left roller vex"]!!,
+						hwMap!!.crservo["right roller vex"]!!
+				)
+
+				roller[1].direction = DcMotorSimple.Direction.REVERSE
+
+				// Set all motors to zero power and to run without encoders
+				for ((_, motorList) in motors) {
+					motorList.forEach {
+						it.mode = DcMotor.RunMode.STOP_AND_RESET_ENCODER
+					}
+				}
+
+				Thread.sleep(50)
+
+				for ((_, motorList) in motors) {
+					motorList.forEach {
+						it.mode = motorMode
+						it.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
+						it.power = 0.0
+					}
+				}
+
+				motors["drive"]!![0].direction = DcMotorSimple.Direction.REVERSE
+				motors["drive"]!![1].direction = DcMotorSimple.Direction.FORWARD
+				motors["drive"]!![2].direction = DcMotorSimple.Direction.REVERSE
+				motors["drive"]!![3].direction = DcMotorSimple.Direction.FORWARD
+				motors["arm"]!![0].direction = DcMotorSimple.Direction.REVERSE
+				motors["arm"]!![1].direction = DcMotorSimple.Direction.FORWARD
+				motors["arm"]!![2].direction = DcMotorSimple.Direction.REVERSE
+			}
+		} catch (_: KotlinNullPointerException) {
+			mode.telemetry!!.addData("Motors", "Error initializing")
 		}
 
 		if (useVuforia) {
@@ -191,16 +207,16 @@ class Hardware(
 
 	private fun holonomic(x: Double, y: Double, θ: Double) {
 		setDrive(
-				-x * frontStrafe + y - θ,
-				x * frontStrafe + y + θ,
+				-x + y - θ,
+				x + y + θ,
 				x + y - θ,
 				-x + y + θ
 		)
 	}
 
 	private fun mecanum(x: Double, y: Double, θ: Double) {
-		val fl = x + y - θ
-		val fr = -x + y + θ
+		val fl = x * frontStrafe + y - θ
+		val fr = -x * frontStrafe + y + θ
 		val bl = -x + y - θ
 		val br = x + y + θ
 		setDrive(fl, fr, bl, br)
@@ -221,7 +237,7 @@ class Hardware(
 	fun setDriveTargets(positions: Array<Double>, power : Double? = null) {
 		val drive = motors["drive"]!!
 
-		for (i in 0..motors["drive"]!!.size) {
+		for (i in 0 until motors["drive"]!!.size) {
 			drive[i].targetPosition = positions[i].toInt()
 			if (power != null) {
 				drive[i].power = power
@@ -239,10 +255,12 @@ class Hardware(
 		drive[3].power += change
 
 		drive.forEach { motor ->
-			if (Math.abs(motor.targetPosition - motor.currentPosition) > tolerance && isActive()) {
+			while (Math.abs(motor.targetPosition - motor.currentPosition) > tolerance && isActive()) {
 				update()
 				linearPositionAngle(multiplier, target)
-			} else if (!isActive()) {
+			}
+
+			if (!isActive()) {
 				return@linearPositionAngle
 			}
 		}
@@ -299,6 +317,7 @@ class Hardware(
 			}
 		}
 
+		mode.telemetry.addData("Button", button!!.state)
 		mode.telemetry.update()
 		waitForTick(ms.toLong())
 	}
