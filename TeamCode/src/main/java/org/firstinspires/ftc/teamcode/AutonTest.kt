@@ -62,7 +62,8 @@ class AutonTest : LinearOpMode() {
 				if (motor.isBusy) {
 					isBusy = true
 				} else {
-					robot.motors["drive"]!![1].power = 0.0; robot.motors["drive"]!![3].power = 0.0
+					robot.motors["drive"]!![1].power = 0.0
+					robot.motors["drive"]!![3].power = 0.0
 				}
 			}
 			robot.update()

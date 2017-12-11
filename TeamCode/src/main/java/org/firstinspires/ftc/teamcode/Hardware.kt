@@ -32,7 +32,7 @@ class Hardware(
 		private var driveMode: DriveMode,
 		private var newSensors: Boolean = false,
 		private var useSensors: Boolean = false,
-		public  var useVuforia: Boolean = false,
+		var useVuforia: Boolean = false,
 		private var useMotors: Boolean = true) {
 	// Time elapsed
 	private val period = ElapsedTime()
@@ -131,7 +131,7 @@ class Hardware(
 			if (useMotors) {
 				// Define and Initialize Motors
 				motors = mapOf(
-						Pair("drive", arrayOf(
+						Pair("drive", arrayOf<DcMotor>(
 								hwMap!!.dcMotor["front left drive"]!!,
 								hwMap!!.dcMotor["front right drive"]!!,
 								hwMap!!.dcMotor["back left drive"]!!,
@@ -215,11 +215,11 @@ class Hardware(
 	}
 
 	private fun mecanum(x: Double, y: Double, θ: Double) {
-		val fl = x * frontStrafe + y - θ
-		val fr = -x * frontStrafe + y + θ
-		val bl = -x + y - θ
-		val br = x + y + θ
-		setDrive(fl, fr, bl, br)
+		setDrive(
+				x * frontStrafe + y - θ,
+				-x * frontStrafe + y + θ,
+				-x + y - θ,
+				x + y + θ)
 	}
 
 	fun drive(x: Number, y: Number, θ: Number = 0) {
@@ -234,7 +234,7 @@ class Hardware(
 		}
 	}
 
-	fun setDriveTargets(positions: Array<Double>, power : Double? = null) {
+	fun setDriveTargets(positions: Array<Double>, power: Double? = null) {
 		val drive = motors["drive"]!!
 
 		for (i in 0 until motors["drive"]!!.size) {
