@@ -4,13 +4,14 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.hardware.DcMotor
 import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark
+import java.util.concurrent.TimeUnit
 
 /**
  * Created by ethan on 7/29/17.
  */
 
-@Autonomous(name = "Test Auton 2", group = "Robot")
-class AutonTest2 : LinearOpMode() {
+@Autonomous(name = "Move Jewel", group = "Robot")
+class MoveJewel: LinearOpMode() {
 
 	/* Declare OpMode members. */
 	private var robot = Hardware(
@@ -42,11 +43,18 @@ class AutonTest2 : LinearOpMode() {
 			robot.relicTrackables!!.deactivate()
 		}
 
+		val arm = robot.motors["arm"]!![0]
+		arm.power = 1.0
+		arm.targetPosition = 200
+
+		robot.roller[0].power = 1.0
+		robot.roller[1].power = 1.0
+
 		robot.setDriveTargets(arrayOf(
-				1800.0,
-				1800.0,
-				1800.0,
-				1800.0
+				2300.0,
+				2300.0,
+				2300.0,
+				2300.0
 		), 1.0)
 
 		do {
@@ -55,22 +63,20 @@ class AutonTest2 : LinearOpMode() {
 				if (motor.isBusy) {
 					isBusy = true
 				} else {
-					robot.motors["drive"]!![1].power = 0.0; robot.motors["drive"]!![3].power = 0.0
+					robot.motors["drive"]!![1].power = 0.0
+					robot.motors["drive"]!![3].power = 0.0
 				}
 			}
 			robot.update()
 		} while (opModeIsActive() && isBusy)
 
-		robot.roller[0].power = 1.0
-		robot.roller[1].power = 1.0
-
 		Thread.sleep(3500)
 
 		robot.setDriveTargets(arrayOf(
-				1500.0,
-				1500.0,
-				1500.0,
-				1500.0
+				2000.0,
+				2000.0,
+				2000.0,
+				2000.0
 		))
 
 		do {
@@ -87,6 +93,15 @@ class AutonTest2 : LinearOpMode() {
 
 		while (opModeIsActive()) {
 			robot.update()
+		}
+	}
+
+	private fun jewelKnock() {
+		robot.jewel!!.power = 1.0
+		val t = robot.time.milliseconds()
+
+		while (robot.color(robot.jewelColor!!) == Hardware.COLORS.NONE &&
+				robot.time.now(TimeUnit.MILLISECONDS) < t) {
 		}
 	}
 }

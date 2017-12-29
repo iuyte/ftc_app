@@ -10,7 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.RelicRecoveryVuMark
  */
 
 @Autonomous(name = "Test Auton", group = "Robot")
-class AutonTest : LinearOpMode() {
+class AutonTest: LinearOpMode() {
 
 	/* Declare OpMode members. */
 	private var robot = Hardware(

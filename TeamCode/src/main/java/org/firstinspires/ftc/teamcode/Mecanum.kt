@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.DcMotor
 
 @TeleOp(name = "Mecanum", group = "Drive")
-class Mecanum : LinearOpMode() {
+class Mecanum: LinearOpMode() {
 	/* Declare OpMode members. */
 	private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum, false) // use the class created to define a robot's hardware
 	private var speedMultiplier = 0.0
@@ -23,6 +23,7 @@ class Mecanum : LinearOpMode() {
 			robot.motors["arm"]!![i].power = liftPower
 		}
 
+		val drive = robot.motors["drive"]!!
 		val arm = robot.motors["arm"]!!
 		val button = robot.button!!
 
@@ -40,11 +41,13 @@ class Mecanum : LinearOpMode() {
 					arm[2].currentPosition)
 
 			// Run the robot drive in mecanum mode
-			robot.drive(
-					-gamepad1.left_stick_x * speedMultiplier,
-					-gamepad1.left_stick_y * speedMultiplier,
-					-gamepad1.right_stick_x * speedMultiplier
-			)
+			val x = -gamepad1.left_stick_x.toDouble()
+			val y = -gamepad1.left_stick_y.toDouble()
+			val z = -gamepad1.right_stick_x.toDouble()
+
+			for (i in 0..3) {
+				drive[i].power = robot.mecanum(x, y, z, i)
+			}
 
 			when {
 				gamepad1.right_bumper || gamepad2.right_bumper -> {
@@ -83,6 +86,9 @@ class Mecanum : LinearOpMode() {
 
 			robot.update(25)
 		}
-		robot.drive(0, 0, 0)
+
+		drive.forEach { motor ->
+			motor.power = 0.0
+		}
 	}
 }

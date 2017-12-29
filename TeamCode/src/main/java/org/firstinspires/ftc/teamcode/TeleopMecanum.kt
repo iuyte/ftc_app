@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotor
  */
 
 @TeleOp(name = "robot: Teleop Mecanum", group = "robot")
-class TeleopMecanum : OpMode() {
+class TeleopMecanum: OpMode() {
 
 	/* Declare OpMode members. */
 	private var robot = Hardware(hardwareMap, this, Hardware.DriveMode.Mecanum, false) // use the class created to define a robot's hardware
@@ -53,11 +53,13 @@ class TeleopMecanum : OpMode() {
 				(if (gamepad2.b) 0.0 else 0.3)
 
 		// Run the robot drive in mecanum mode
-		robot.drive(
-			-gamepad1.left_stick_x * speedMultiplier,
-			-gamepad1.left_stick_y * speedMultiplier,
-			-gamepad1.right_stick_x * speedMultiplier
-		)
+		val x = -gamepad1.left_stick_x * speedMultiplier
+		val y = -gamepad1.left_stick_y * speedMultiplier
+		val z = -gamepad1.right_stick_x * speedMultiplier
+
+		for (i in 0..3) {
+			robot.motors["drive"]!![i].power = robot.mecanum(x, y, z, i)
+		}
 
 		when {
 			gamepad1.right_bumper || gamepad2.right_bumper -> {
